@@ -83,6 +83,8 @@ async def get_items(
         cursor = database.items.find().skip(skip).limit(limit)
         items = []
         async for item_data in cursor:
+            # 确保数据格式正确
+            item_data["id"] = item_data.pop("_id", None)
             item_doc = ItemDocument(**item_data)
             items.append(ItemResponse(
                 id=str(item_doc.id),
@@ -120,6 +122,8 @@ async def get_item(
         if not item_data:
             raise HTTPException(status_code=404, detail="物品不存在")
         
+        # 确保数据格式正确
+        item_data["id"] = item_data.pop("_id", None)
         item_doc = ItemDocument(**item_data)
         return ItemResponse(
             id=str(item_doc.id),
@@ -227,7 +231,9 @@ async def update_item(
         updated_item_data = await database.items.find_one({"_id": ObjectId(item_id)})
         if not updated_item_data:
             raise HTTPException(status_code=404, detail="物品不存在")
-        updated_item = ItemDocument(**dict(updated_item_data))
+        # 确保数据格式正确
+        updated_item_data["id"] = updated_item_data.pop("_id", None)
+        updated_item = ItemDocument(**updated_item_data)
         
         return ItemResponse(
             id=str(updated_item.id),

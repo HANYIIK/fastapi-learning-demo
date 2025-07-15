@@ -158,142 +158,146 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 ## 🧪 API 测试命令
 
-### 基础测试
+### 🔐 认证相关接口
 
+#### 1. 用户登录
 ```bash
-# 测试根路径
-curl http://localhost:8000/
-
-# 健康检查
-curl http://localhost:8000/health
-
-# 格式化 JSON 输出
-curl http://localhost:8000/ | python -m json.tool
-```
-
-### 用户认证测试
-
-```bash
-# 1. 用户注册
-curl -X POST "http://localhost:8000/api/v1/auth/register" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "testuser",
-    "email": "test@example.com",
-    "password": "password123",
-    "is_active": true
-  }'
-
-# 2. 用户登录
 curl -X POST "http://localhost:8000/api/v1/auth/login" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=testuser&password=password123"
-
-# 3. 保存 Token 到变量（从登录响应中复制 access_token）
-export TOKEN="your_access_token_here"
-
-# 4. 使用 Token 访问受保护的路由
-curl -X GET "http://localhost:8000/protected" \
-  -H "Authorization: Bearer $TOKEN"
-
-# 5. 获取当前用户信息
-curl -X GET "http://localhost:8000/api/v1/auth/me" \
-  -H "Authorization: Bearer $TOKEN"
+  -d "username=admin&password=admin123"
 ```
 
-### 用户管理测试
-
+#### 2. 用户注册
 ```bash
-# 获取用户列表
-curl -X GET "http://localhost:8000/api/v1/users/" \
-  -H "Authorization: Bearer $TOKEN"
-
-# 创建新用户
-curl -X POST "http://localhost:8000/api/v1/users/" \
-  -H "Authorization: Bearer $TOKEN" \
+curl -X POST "http://localhost:8000/api/v1/auth/register" \
   -H "Content-Type: application/json" \
   -d '{
     "username": "newuser",
     "email": "newuser@example.com",
+    "password": "password123",
+    "is_active": true,
+    "is_superuser": false
+  }'
+```
+
+#### 3. 获取当前用户信息
+```bash
+curl -X GET "http://localhost:8000/api/v1/auth/me" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc1MjU2NjkwN30.uwolFA7g0j3AYpqR4hqAZ5bTF8NNrDgFoQoAoPMG2K0"
+```
+
+### 👥 用户管理接口
+
+#### 4. 获取用户列表
+```bash
+curl -X GET "http://localhost:8000/api/v1/users/?skip=0&limit=10" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc1MjU2NjkwN30.uwolFA7g0j3AYpqR4hqAZ5bTF8NNrDgFoQoAoPMG2K0"
+```
+
+#### 5. 根据ID获取用户
+```bash
+curl -X GET "http://localhost:8000/api/v1/users/USER_ID_HERE" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc1MjU2NjkwN30.uwolFA7g0j3AYpqR4hqAZ5bTF8NNrDgFoQoAoPMG2K0"
+```
+
+#### 6. 创建新用户
+```bash
+curl -X POST "http://localhost:8000/api/v1/users/" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc1MjU2NjkwN30.uwolFA7g0j3AYpqR4hqAZ5bTF8NNrDgFoQoAoPMG2K0" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "testuser",
+    "email": "testuser@example.com",
+    "password": "password123",
+    "is_active": true,
+    "is_superuser": false
+  }'
+```
+
+#### 7. 更新用户信息
+```bash
+curl -X PUT "http://localhost:8000/api/v1/users/USER_ID_HERE" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc1MjU2NjkwN30.uwolFA7g0j3AYpqR4hqAZ5bTF8NNrDgFoQoAoPMG2K0" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "updateduser",
+    "email": "updated@example.com",
     "password": "newpassword123",
     "is_active": true
   }'
-
-# 获取特定用户（替换 USER_ID）
-USER_ID="user_id_from_previous_response"
-curl -X GET "http://localhost:8000/api/v1/users/$USER_ID" \
-  -H "Authorization: Bearer $TOKEN"
 ```
 
-### 物品管理测试
-
+#### 8. 删除用户
 ```bash
-# 创建物品
+curl -X DELETE "http://localhost:8000/api/v1/users/USER_ID_HERE" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc1MjU2NjkwN30.uwolFA7g0j3AYpqR4hqAZ5bTF8NNrDgFoQoAoPMG2K0"
+```
+
+### 📦 物品管理接口
+
+#### 9. 获取物品列表
+```bash
+curl -X GET "http://localhost:8000/api/v1/items/?skip=0&limit=10" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc1MjU2NjkwN30.uwolFA7g0j3AYpqR4hqAZ5bTF8NNrDgFoQoAoPMG2K0"
+```
+
+#### 10. 根据ID获取物品
+```bash
+curl -X GET "http://localhost:8000/api/v1/items/ITEM_ID_HERE" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc1MjU2NjkwN30.uwolFA7g0j3AYpqR4hqAZ5bTF8NNrDgFoQoAoPMG2K0"
+```
+
+#### 11. 创建新物品
+```bash
 curl -X POST "http://localhost:8000/api/v1/items/" \
-  -H "Authorization: Bearer $TOKEN" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc1MjU2NjkwN30.uwolFA7g0j3AYpqR4hqAZ5bTF8NNrDgFoQoAoPMG2K0" \
   -H "Content-Type: application/json" \
   -d '{
-    "title": "MacBook Pro",
-    "description": "高性能笔记本电脑",
-    "price": 12999.0
+    "title": "测试物品",
+    "description": "这是一个测试物品",
+    "price": 99.99
   }'
-
-# 获取物品列表
-curl -X GET "http://localhost:8000/api/v1/items/" \
-  -H "Authorization: Bearer $TOKEN"
-
-# 获取特定物品（替换 ITEM_ID）
-ITEM_ID="item_id_from_previous_response"
-curl -X GET "http://localhost:8000/api/v1/items/$ITEM_ID" \
-  -H "Authorization: Bearer $TOKEN"
-
-# 更新物品
-curl -X PUT "http://localhost:8000/api/v1/items/$ITEM_ID" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "MacBook Pro 更新版",
-    "price": 13999.0
-  }'
-
-# 删除物品
-curl -X DELETE "http://localhost:8000/api/v1/items/$ITEM_ID" \
-  -H "Authorization: Bearer $TOKEN"
 ```
 
-### 完整测试流程示例
-
+#### 12. 更新物品信息
 ```bash
-# 步骤 1: 注册用户
-curl -X POST "http://localhost:8000/api/v1/auth/register" \
+curl -X PUT "http://localhost:8000/api/v1/items/ITEM_ID_HERE" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc1MjU2NjkwN30.uwolFA7g0j3AYpqR4hqAZ5bTF8NNrDgFoQoAoPMG2K0" \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "demo_user",
-    "email": "demo@example.com",
-    "password": "demo123",
-    "is_active": true
+    "title": "更新后的物品",
+    "description": "这是更新后的描述",
+    "price": 199.99
   }'
+```
 
-# 步骤 2: 登录获取 Token
-curl -X POST "http://localhost:8000/api/v1/auth/login" \
+#### 13. 删除物品
+```bash
+curl -X DELETE "http://localhost:8000/api/v1/items/ITEM_ID_HERE" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc1MjU2NjkwN30.uwolFA7g0j3AYpqR4hqAZ5bTF8NNrDgFoQoAoPMG2K0"
+```
+
+### 🔄 获取新 Token 的快捷命令
+
+```bash
+# 登录获取新token
+TOKEN=$(curl -s -X POST "http://localhost:8000/api/v1/auth/login" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=demo_user&password=demo123"
+  -d "username=admin&password=admin123" | jq -r '.access_token')
 
-# 步骤 3: 保存 Token
-export TOKEN="your_access_token_here"
-
-# 步骤 4: 创建物品
-curl -X POST "http://localhost:8000/api/v1/items/" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "iPhone 15",
-    "description": "最新款智能手机",
-    "price": 7999.0
-  }'
+echo "新token: $TOKEN"
 ```
 
-### 调试命令
+### 📝 使用说明
+
+1. **Token 有效期**：JWT token 有30分钟有效期，过期后需要重新登录获取新token
+2. **替换 ID**：将 `USER_ID_HERE` 和 `ITEM_ID_HERE` 替换为实际的用户ID和物品ID
+3. **权限说明**：
+   - 只有超级用户才能创建、更新、删除其他用户
+   - 用户只能修改自己创建的物品
+   - 所有接口都需要有效的 JWT token
+
+### 🔧 调试命令
 
 ```bash
 # 查看详细响应

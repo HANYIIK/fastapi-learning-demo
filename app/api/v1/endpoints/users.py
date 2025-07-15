@@ -28,13 +28,15 @@ async def get_users(
     - **limit**: 返回的最大记录数
     """
     database = get_database()
-    if not database:
+    if database is None:
         raise HTTPException(status_code=500, detail="数据库连接失败")
     
     try:
         cursor = database.users.find().skip(skip).limit(limit)
         users = []
         async for user_data in cursor:
+            # 确保数据格式正确
+            user_data["id"] = user_data.pop("_id", None)
             user_doc = UserDocument(**user_data)
             users.append(UserResponse(
                 id=str(user_doc.id),
@@ -61,7 +63,7 @@ async def get_user(
     - **user_id**: 用户 ID
     """
     database = get_database()
-    if not database:
+    if database is None:
         raise HTTPException(status_code=500, detail="数据库连接失败")
     
     try:
@@ -72,6 +74,8 @@ async def get_user(
         if not user_data:
             raise HTTPException(status_code=404, detail="用户不存在")
         
+        # 确保数据格式正确
+        user_data["id"] = user_data.pop("_id", None)
         user_doc = UserDocument(**user_data)
         return UserResponse(
             id=str(user_doc.id),
@@ -99,7 +103,7 @@ async def create_user(
     - **user**: 用户信息
     """
     database = get_database()
-    if not database:
+    if database is None:
         raise HTTPException(status_code=500, detail="数据库连接失败")
     
     try:
@@ -154,7 +158,7 @@ async def update_user(
     - **user_update**: 更新的用户信息
     """
     database = get_database()
-    if not database:
+    if database is None:
         raise HTTPException(status_code=500, detail="数据库连接失败")
     
     try:
@@ -200,6 +204,10 @@ async def update_user(
         
         # 获取更新后的用户
         updated_user_data = await database.users.find_one({"_id": ObjectId(user_id)})
+        if not updated_user_data:
+            raise HTTPException(status_code=404, detail="用户不存在")
+        # 确保数据格式正确
+        updated_user_data["id"] = updated_user_data.pop("_id", None)
         updated_user = UserDocument(**updated_user_data)
         
         return UserResponse(
@@ -228,7 +236,7 @@ async def delete_user(
     - **user_id**: 用户 ID
     """
     database = get_database()
-    if not database:
+    if database is None:
         raise HTTPException(status_code=500, detail="数据库连接失败")
     
     try:

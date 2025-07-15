@@ -64,6 +64,8 @@ async def get_user_by_username(username: str) -> Optional[UserDocument]:
     
     user_data = await database.users.find_one({"username": username})
     if user_data:
+        # 确保数据格式正确
+        user_data["id"] = user_data.pop("_id", None)
         return UserDocument(**user_data)
     return None
 

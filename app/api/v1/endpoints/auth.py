@@ -26,7 +26,7 @@ async def login(
     - **password**: 密码
     """
     database = get_database()
-    if not database:
+    if database is None:
         raise HTTPException(status_code=500, detail="数据库连接失败")
     
     try:
@@ -78,7 +78,7 @@ async def register(
     - **user_data**: 用户注册信息
     """
     database = get_database()
-    if not database:
+    if database is None:
         raise HTTPException(status_code=500, detail="数据库连接失败")
     
     try:
