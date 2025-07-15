@@ -8,16 +8,22 @@ from fastapi.security import OAuth2PasswordRequestForm
 from app.core.auth import verify_password, create_access_token, get_current_user, get_password_hash, get_user_by_username
 from app.core.config import settings
 from app.core.database import get_database
-from app.models.user import UserResponse, UserCreate, UserDocument
-from app.schemas.user import Token
+from app.models.user import UserResponse, UserCreate, UserDocument, Token
 from loguru import logger
 
 router = APIRouter()
 
+# 获取数据库依赖
+async def get_database_dependency():
+    database = get_database()
+    if database is None:
+        raise HTTPException(status_code=500, detail="数据库连接失败")
+    return database
 
 @router.post("/login", response_model=Token)
 async def login(
-    form_data: OAuth2PasswordRequestForm = Depends()
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    database = Depends(get_database_dependency)
 ):
     """
     用户登录接口
@@ -25,10 +31,6 @@ async def login(
     - **username**: 用户名
     - **password**: 密码
     """
-    database = get_database()
-    if database is None:
-        raise HTTPException(status_code=500, detail="数据库连接失败")
-    
     try:
         # 从数据库获取用户
         user = await get_user_by_username(form_data.username)
@@ -70,17 +72,14 @@ async def login(
 
 @router.post("/register", response_model=UserResponse)
 async def register(
-    user_data: UserCreate
+    user_data: UserCreate,
+    database = Depends(get_database_dependency)
 ):
     """
     用户注册接口
     
     - **user_data**: 用户注册信息
     """
-    database = get_database()
-    if database is None:
-        raise HTTPException(status_code=500, detail="数据库连接失败")
-    
     try:
         # 检查用户名是否已存在
         existing_user = await database.users.find_one({"username": user_data.username})
@@ -92,7 +91,7 @@ async def register(
         if existing_email:
             raise HTTPException(status_code=400, detail="邮箱已存在")
         
-        # 创建新用户
+        # 创建新用户，显式设置中国时间
         hashed_password = get_password_hash(user_data.password)
         user_doc = UserDocument(
             username=user_data.username,

@@ -6,20 +6,27 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from bson import ObjectId
 from datetime import datetime
 
-from app.core.auth import get_current_user, get_current_active_user, get_password_hash
+from app.core.auth import get_current_active_user, get_password_hash
 from app.core.database import get_database
-from app.models.user import UserDocument
-from app.schemas.user import UserResponse, UserCreate, UserUpdate
+from app.models.user import UserDocument, UserResponse, UserCreate, UserUpdate
 from loguru import logger
 
 router = APIRouter()
+
+# 获取数据库依赖
+async def get_database_dependency():
+    database = get_database()
+    if database is None:
+        raise HTTPException(status_code=500, detail="数据库连接失败")
+    return database
 
 
 @router.get("/", response_model=List[UserResponse])
 async def get_users(
     skip: int = 0,
     limit: int = 100,
-    current_user: UserDocument = Depends(get_current_active_user)
+    current_user: UserDocument = Depends(get_current_active_user),
+    database = Depends(get_database_dependency)
 ):
     """
     获取用户列表
@@ -27,10 +34,6 @@ async def get_users(
     - **skip**: 跳过的记录数
     - **limit**: 返回的最大记录数
     """
-    database = get_database()
-    if database is None:
-        raise HTTPException(status_code=500, detail="数据库连接失败")
-    
     try:
         cursor = database.users.find().skip(skip).limit(limit)
         users = []
@@ -55,17 +58,14 @@ async def get_users(
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(
     user_id: str,
-    current_user: UserDocument = Depends(get_current_active_user)
+    current_user: UserDocument = Depends(get_current_active_user),
+    database = Depends(get_database_dependency)
 ):
     """
     根据 ID 获取用户信息
     
     - **user_id**: 用户 ID
     """
-    database = get_database()
-    if database is None:
-        raise HTTPException(status_code=500, detail="数据库连接失败")
-    
     try:
         if not ObjectId.is_valid(user_id):
             raise HTTPException(status_code=400, detail="无效的用户ID")
@@ -95,17 +95,14 @@ async def get_user(
 @router.post("/", response_model=UserResponse)
 async def create_user(
     user: UserCreate,
-    current_user: UserDocument = Depends(get_current_active_user)
+    current_user: UserDocument = Depends(get_current_active_user),
+    database = Depends(get_database_dependency)
 ):
     """
     创建新用户
     
     - **user**: 用户信息
     """
-    database = get_database()
-    if database is None:
-        raise HTTPException(status_code=500, detail="数据库连接失败")
-    
     try:
         # 检查用户名是否已存在
         existing_user = await database.users.find_one({"username": user.username})
@@ -117,7 +114,7 @@ async def create_user(
         if existing_email:
             raise HTTPException(status_code=400, detail="邮箱已存在")
         
-        # 创建新用户
+        # 创建新用户，显式设置中国时间
         hashed_password = get_password_hash(user.password)
         user_doc = UserDocument(
             username=user.username,
@@ -149,7 +146,8 @@ async def create_user(
 async def update_user(
     user_id: str,
     user_update: UserUpdate,
-    current_user: UserDocument = Depends(get_current_active_user)
+    current_user: UserDocument = Depends(get_current_active_user),
+    database = Depends(get_database_dependency)
 ):
     """
     更新用户信息
@@ -157,10 +155,6 @@ async def update_user(
     - **user_id**: 用户 ID
     - **user_update**: 更新的用户信息
     """
-    database = get_database()
-    if database is None:
-        raise HTTPException(status_code=500, detail="数据库连接失败")
-    
     try:
         if not ObjectId.is_valid(user_id):
             raise HTTPException(status_code=400, detail="无效的用户ID")
@@ -228,17 +222,14 @@ async def update_user(
 @router.delete("/{user_id}")
 async def delete_user(
     user_id: str,
-    current_user: UserDocument = Depends(get_current_active_user)
+    current_user: UserDocument = Depends(get_current_active_user),
+    database = Depends(get_database_dependency)
 ):
     """
     删除用户
     
     - **user_id**: 用户 ID
     """
-    database = get_database()
-    if database is None:
-        raise HTTPException(status_code=500, detail="数据库连接失败")
-    
     try:
         if not ObjectId.is_valid(user_id):
             raise HTTPException(status_code=400, detail="无效的用户ID")

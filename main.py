@@ -22,6 +22,7 @@ async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     # 启动时执行
     logger.info("🚀 启动 FastAPI 应用...")
+    # 初始化数据库
     await init_db()
     logger.info("✅ MongoDB 数据库初始化完成")
     
@@ -29,14 +30,15 @@ async def lifespan(app: FastAPI):
     
     # 关闭时执行
     logger.info("🛑 关闭 FastAPI 应用...")
+    # 关闭数据库连接
     await close_mongo_connection()
 
 
 # 创建 FastAPI 应用实例
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="FastAPI 学习项目 - 包含用户管理、认证、数据库操作等示例",
-    version="1.0.0",
+    description=settings.DESCRIPTION,
+    version=settings.VERSION,
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan
@@ -56,10 +58,10 @@ app.add_middleware(
 async def root():
     """根路径 - 欢迎页面"""
     return {
-        "message": "欢迎使用 FastAPI 学习项目！",
+        "message": settings.DESCRIPTION,
         "docs": "/docs",
         "redoc": "/redoc",
-        "version": "1.0.0"
+        "version": settings.VERSION
     }
 
 
@@ -89,8 +91,8 @@ app.include_router(api_router, prefix="/api/v1")
 if __name__ == "__main__":
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
-        port=8000,
+        host=settings.HOST,
+        port=settings.PORT,
         reload=True,
         log_level="info"
     ) 

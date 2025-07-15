@@ -5,23 +5,7 @@ from pydantic import BaseModel, Field, EmailStr
 from typing import Optional
 from datetime import datetime
 from bson import ObjectId
-
-
-class PyObjectId(ObjectId):
-    """自定义 ObjectId 类型"""
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, v, info=None):
-        if not ObjectId.is_valid(v):
-            raise ValueError("Invalid ObjectId")
-        return ObjectId(v)
-
-    @classmethod
-    def __get_pydantic_json_schema__(cls, field_schema):
-        field_schema.update(type="string")
+from app.models.common import PyObjectId
 
 
 # Pydantic 模型用于 API
@@ -67,6 +51,17 @@ class UserResponse(UserBase):
     class Config:
         from_attributes = True
         json_encoders = {ObjectId: str}
+
+
+class Token(BaseModel):
+    """令牌模型"""
+    access_token: str
+    token_type: str = "bearer"
+
+
+class TokenData(BaseModel):
+    """令牌数据模型"""
+    username: Optional[str] = None
 
 
 # MongoDB 文档模型

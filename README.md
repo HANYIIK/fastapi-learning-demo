@@ -14,6 +14,7 @@
 - **日志系统**: 结构化日志记录（Loguru）
 - **异步支持**: 全异步数据库操作
 - **测试支持**: 单元测试框架
+- **代码重构**: 统一的模型管理和类型定义
 
 ## 📁 项目结构
 
@@ -29,7 +30,9 @@ fastapi-learning-project/
 │   │   ├── config.py    # 配置管理
 │   │   └── database.py  # MongoDB 连接
 │   ├── models/          # 数据模型
-│   ├── schemas/         # Pydantic 模式
+│   │   ├── common.py    # 共享类型定义
+│   │   ├── user.py      # 用户模型
+│   │   └── item.py      # 物品模型
 │   ├── services/        # 业务逻辑
 │   └── utils/           # 工具函数
 ├── tests/               # 测试文件
@@ -376,6 +379,30 @@ raise HTTPException(
     status_code=status.HTTP_404_NOT_FOUND,
     detail="用户不存在"
 )
+```
+
+### 5. 模型管理最佳实践
+
+```python
+# 共享类型定义 (app/models/common.py)
+class PyObjectId(ObjectId):
+    """自定义 ObjectId 类型"""
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+# 用户模型 (app/models/user.py)
+class UserDocument(BaseModel):
+    id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
+    username: str
+    created_at: datetime = Field(default_factory=get_china_time)
+
+# 物品模型 (app/models/item.py)
+class ItemDocument(BaseModel):
+    id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
+    title: str
+    owner_id: PyObjectId
+    created_at: datetime = Field(default_factory=get_china_time)
 ```
 
 ## 🔧 开发工具

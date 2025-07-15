@@ -7,10 +7,19 @@ from pydantic import Field
 
 
 class Settings(BaseSettings):
-    """应用配置类"""
+    """应用配置类
+    
+    配置优先级：
+    1. 环境变量（最高）
+    2. .env 文件
+    3. 默认值（最低）
+    
+    生产环境请通过环境变量或 .env 文件覆盖敏感配置
+    """
     
     # 项目基本信息
     PROJECT_NAME: str = "FastAPI Learning Project"
+    DESCRIPTION: str = "FastAPI 学习项目"
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
     
@@ -24,7 +33,7 @@ class Settings(BaseSettings):
     MONGODB_DB_NAME: str = "fastapi-learning-db"
     
     # 安全配置
-    SECRET_KEY: str = "your-secret-key-here-change-in-production"
+    SECRET_KEY: str = "change-this-secret-key-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
