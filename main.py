@@ -9,7 +9,7 @@ import uvicorn
 from loguru import logger
 
 from app.core.config import settings
-from app.core.database import init_db
+from app.core.database import init_db, close_mongo_connection
 from app.api.v1.api import api_router
 from app.core.auth import get_current_user
 
@@ -23,12 +23,13 @@ async def lifespan(app: FastAPI):
     # 启动时执行
     logger.info("🚀 启动 FastAPI 应用...")
     await init_db()
-    logger.info("✅ 数据库初始化完成")
+    logger.info("✅ MongoDB 数据库初始化完成")
     
     yield
     
     # 关闭时执行
     logger.info("🛑 关闭 FastAPI 应用...")
+    await close_mongo_connection()
 
 
 # 创建 FastAPI 应用实例

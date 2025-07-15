@@ -1,5 +1,5 @@
 """
-认证和授权模块
+认证和授权模块 - MongoDB 版本
 """
 from datetime import datetime, timedelta
 from typing import Optional
@@ -8,10 +8,11 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from loguru import logger
+from bson import ObjectId
 
 from app.core.config import settings
-from app.models.user import User
-from app.schemas.user import UserInDB
+from app.models.user import UserDocument
+from app.core.database import get_database
 
 # 密码加密上下文
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -47,7 +48,7 @@ def verify_token(token: str) -> Optional[dict]:
     """验证令牌"""
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        username: str = payload.get("sub")
+        username = payload.get("sub")
         if username is None:
             return None
         return payload
@@ -55,9 +56,21 @@ def verify_token(token: str) -> Optional[dict]:
         return None
 
 
+async def get_user_by_username(username: str) -> Optional[UserDocument]:
+    """根据用户名获取用户"""
+    database = get_database()
+    if database is None:
+        return None
+    
+    user_data = await database.users.find_one({"username": username})
+    if user_data:
+        return UserDocument(**user_data)
+    return None
+
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security)
-) -> User:
+) -> UserDocument:
     """获取当前用户"""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -70,22 +83,15 @@ async def get_current_user(
         if payload is None:
             raise credentials_exception
         
-        username: str = payload.get("sub")
+        username = payload.get("sub")
         if username is None:
             raise credentials_exception
             
     except JWTError:
         raise credentials_exception
     
-    # 这里应该从数据库获取用户信息
-    # 为了演示，我们创建一个模拟用户
-    user = User(
-        id=1,
-        username=username,
-        email=f"{username}@example.com",
-        is_active=True
-    )
-    
+    # 从 MongoDB 获取用户信息
+    user = await get_user_by_username(username)
     if user is None:
         raise credentials_exception
     
@@ -93,8 +99,8 @@ async def get_current_user(
 
 
 async def get_current_active_user(
-    current_user: User = Depends(get_current_user)
-) -> User:
+    current_user: UserDocument = Depends(get_current_user)
+) -> UserDocument:
     """获取当前活跃用户"""
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="用户已被禁用")

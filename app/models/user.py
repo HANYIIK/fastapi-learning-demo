@@ -1,65 +1,87 @@
 """
-用户数据模型
+用户数据模型 - MongoDB 版本
 """
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
-from sqlalchemy.sql import func
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, EmailStr
 from typing import Optional
 from datetime import datetime
+from bson import ObjectId
 
-from app.core.database import Base
 
+class PyObjectId(ObjectId):
+    """自定义 ObjectId 类型"""
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
 
-class User(Base):
-    """用户数据库模型"""
-    __tablename__ = "users"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True, nullable=False)
-    email = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
-    is_active = Column(Boolean, default=True)
-    is_superuser = Column(Boolean, default=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    @classmethod
+    def validate(cls, v):
+        if not ObjectId.is_valid(v):
+            raise ValueError("Invalid ObjectId")
+        return ObjectId(v)
+
+    @classmethod
+    def __get_pydantic_json_schema__(cls, field_schema):
+        field_schema.update(type="string")
 
 
 # Pydantic 模型用于 API
 class UserBase(BaseModel):
     """用户基础模型"""
-    username: str
-    email: str
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr
     is_active: bool = True
+    is_superuser: bool = False
 
 
 class UserCreate(UserBase):
     """创建用户模型"""
-    password: str
+    password: str = Field(..., min_length=6)
 
 
 class UserUpdate(BaseModel):
     """更新用户模型"""
-    username: Optional[str] = None
-    email: Optional[str] = None
-    password: Optional[str] = None
+    username: Optional[str] = Field(None, min_length=3, max_length=50)
+    email: Optional[EmailStr] = None
+    password: Optional[str] = Field(None, min_length=6)
     is_active: Optional[bool] = None
 
 
 class UserInDB(UserBase):
     """数据库中的用户模型"""
-    id: int
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     hashed_password: str
-    created_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: Optional[datetime] = None
     
     class Config:
-        from_attributes = True
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
 
 
 class UserResponse(UserBase):
     """用户响应模型"""
-    id: int
-    created_at: Optional[datetime] = None
+    id: str
+    created_at: datetime
     
     class Config:
-        from_attributes = True 
+        from_attributes = True
+        json_encoders = {ObjectId: str}
+
+
+# MongoDB 文档模型
+class UserDocument(BaseModel):
+    """MongoDB 用户文档模型"""
+    id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
+    username: str
+    email: str
+    hashed_password: str
+    is_active: bool = True
+    is_superuser: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str} 

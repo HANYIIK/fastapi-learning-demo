@@ -20,7 +20,8 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     
     # 数据库配置
-    DATABASE_URL: str = "sqlite:///./fastapi_learning.db"
+    MONGODB_URL: str = "mongodb://localhost:27017"
+    MONGODB_DB_NAME: str = "fastapi-learning-db"
     
     # 安全配置
     SECRET_KEY: str = "your-secret-key-here-change-in-production"

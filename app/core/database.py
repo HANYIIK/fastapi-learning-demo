@@ -1,72 +1,84 @@
 """
-数据库连接和初始化
+MongoDB 数据库连接和初始化
 """
-from sqlalchemy import create_engine, MetaData
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import ASCENDING, DESCENDING
 from loguru import logger
 
 from app.core.config import settings
 
-# 创建数据库引擎
-if settings.DATABASE_URL.startswith("sqlite"):
-    # SQLite 异步引擎
-    engine = create_async_engine(
-        settings.DATABASE_URL.replace("sqlite:///", "sqlite+aiosqlite:///"),
-        echo=settings.DEBUG
-    )
-    SessionLocal = async_sessionmaker(
-        bind=engine,
-        class_=AsyncSession,
-        autocommit=False,
-        autoflush=False
-    )
-else:
-    # PostgreSQL 异步引擎
-    engine = create_async_engine(
-        settings.DATABASE_URL,
-        echo=settings.DEBUG
-    )
-    SessionLocal = async_sessionmaker(
-        bind=engine,
-        class_=AsyncSession,
-        autocommit=False,
-        autoflush=False
-    )
+# MongoDB 客户端
+client = None
+database = None
 
-# 创建基础模型类
-Base = declarative_base()
 
-# 元数据
-metadata = MetaData()
+async def connect_to_mongo():
+    """连接到 MongoDB"""
+    global client, database
+    try:
+        client = AsyncIOMotorClient(settings.MONGODB_URL)
+        database = client[settings.MONGODB_DB_NAME]
+        
+        # 测试连接
+        await client.admin.command('ping')
+        logger.info("✅ MongoDB 连接成功")
+        
+        # 创建索引
+        await create_indexes()
+        
+    except Exception as e:
+        logger.error(f"❌ MongoDB 连接失败: {e}")
+        raise
+
+
+async def close_mongo_connection():
+    """关闭 MongoDB 连接"""
+    global client
+    if client:
+        client.close()
+        logger.info("🛑 MongoDB 连接已关闭")
+
+
+async def create_indexes():
+    """创建数据库索引"""
+    if database is None:
+        logger.error("❌ 数据库未连接")
+        return
+        
+    try:
+        # 用户集合索引
+        await database.users.create_index([("username", ASCENDING)], unique=True)
+        await database.users.create_index([("email", ASCENDING)], unique=True)
+        await database.users.create_index([("created_at", DESCENDING)])
+        
+        # 物品集合索引
+        await database.items.create_index([("title", ASCENDING)])
+        await database.items.create_index([("owner_id", ASCENDING)])
+        await database.items.create_index([("created_at", DESCENDING)])
+        
+        logger.info("✅ 数据库索引创建成功")
+    except Exception as e:
+        logger.error(f"❌ 创建索引失败: {e}")
+        raise
 
 
 async def init_db():
     """初始化数据库"""
     try:
-        # 创建所有表
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        logger.info("✅ 数据库表创建成功")
+        await connect_to_mongo()
+        logger.info("✅ 数据库初始化完成")
     except Exception as e:
         logger.error(f"❌ 数据库初始化失败: {e}")
         raise
 
 
-async def get_db():
-    """获取数据库会话"""
-    async with SessionLocal() as db:
-        try:
-            yield db
-        finally:
-            await db.close()
+def get_database():
+    """获取数据库实例"""
+    return database
 
 
-async def get_async_db():
-    """获取异步数据库会话"""
-    async with SessionLocal() as session:
-        try:
-            yield session
-        finally:
-            await session.close() 
+async def get_collection(collection_name: str):
+    """获取集合实例"""
+    if database is None:
+        return None
+    return database[collection_name] 
